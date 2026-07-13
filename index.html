@@ -44,14 +44,41 @@
 
             font-size: 17px;
             cursor: pointer;
+
+            transition:
+                background 0.15s,
+                transform 0.1s,
+                opacity 0.15s;
         }
 
-        button:hover {
+        button:hover:not(:disabled) {
             background: #292929;
         }
 
-        button:active {
+        button:active:not(:disabled) {
             transform: scale(0.97);
+        }
+
+        button:disabled {
+            background: #3a3a3a;
+            color: #888888;
+
+            border-color: #666666;
+
+            cursor: not-allowed;
+            opacity: 0.65;
+
+            transform: none;
+        }
+
+        #keyTitle {
+            display: none;
+
+            margin-top: 24px;
+            margin-bottom: 12px;
+
+            font-size: 22px;
+            font-weight: bold;
         }
 
         #codeArea {
@@ -61,7 +88,6 @@
             justify-content: center;
 
             gap: 10px;
-            margin-top: 22px;
         }
 
         #codePanel {
@@ -70,9 +96,6 @@
 
             border: 3px solid white;
 
-            /*
-             * Slightly unusual panel shape.
-             */
             border-radius: 18px 5px 18px 5px;
 
             background: #101010;
@@ -92,9 +115,6 @@
             font-weight: bold;
             letter-spacing: 3px;
 
-            /*
-             * Allows normal text highlighting and copying.
-             */
             user-select: text;
             cursor: text;
         }
@@ -115,14 +135,20 @@
 
 <body>
     <main class="container">
+
         <button
-            id="generateButton"
+            id="downloadButton"
             type="button"
         >
-            Generate Code
+            Download
         </button>
 
+        <div id="keyTitle">
+            Here is Your Key
+        </div>
+
         <div id="codeArea">
+
             <div id="codePanel">
                 <span id="generatedCode"></span>
             </div>
@@ -133,14 +159,19 @@
             >
                 Copy
             </button>
+
         </div>
 
         <div id="copyStatus"></div>
+
     </main>
 
     <script>
-        const generateButton =
-            document.getElementById("generateButton");
+        const downloadButton =
+            document.getElementById("downloadButton");
+
+        const keyTitle =
+            document.getElementById("keyTitle");
 
         const codeArea =
             document.getElementById("codeArea");
@@ -154,12 +185,15 @@
         const copyStatus =
             document.getElementById("copyStatus");
 
+
         /*
-         * Removed easily confused characters:
-         * 0, O, 1, I and L.
+         * Characters that can easily be confused have been removed:
+         *
+         * 0, O, 1, I and L
          */
         const characters =
             "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
 
         function getSecureRandomNumber(maximum) {
             const randomValues =
@@ -172,9 +206,10 @@
             return randomValues[0] % maximum;
         }
 
+
         function generateRandomCode() {
             /*
-             * Generates a length from 5 through 8.
+             * Generates a random length from 5 to 8.
              */
             const codeLength =
                 5 + getSecureRandomNumber(4);
@@ -198,19 +233,74 @@
             return code;
         }
 
-        generateButton.addEventListener(
+
+        function showGeneratedKey(code) {
+            generatedCode.textContent =
+                code;
+
+            keyTitle.style.display =
+                "block";
+
+            codeArea.style.display =
+                "flex";
+
+            copyStatus.textContent =
+                "";
+
+            downloadButton.disabled =
+                true;
+
+            downloadButton.textContent =
+                "Downloaded";
+        }
+
+
+        /*
+         * Restore the key after refreshing the page.
+         *
+         * sessionStorage is cleared when the tab/browser session closes.
+         */
+        const existingKey =
+            sessionStorage.getItem(
+                "oasisGeneratedKey"
+            );
+
+        if (existingKey) {
+            showGeneratedKey(
+                existingKey
+            );
+        }
+
+
+        downloadButton.addEventListener(
             "click",
             function () {
-                generatedCode.textContent =
+                /*
+                 * Prevent another key being created during
+                 * the same browser session.
+                 */
+                if (
+                    sessionStorage.getItem(
+                        "oasisGeneratedKey"
+                    )
+                ) {
+                    return;
+                }
+
+                const newCode =
                     generateRandomCode();
 
-                codeArea.style.display =
-                    "flex";
+                sessionStorage.setItem(
+                    "oasisGeneratedKey",
+                    newCode
+                );
 
-                copyStatus.textContent =
-                    "";
+                showGeneratedKey(
+                    newCode
+                );
             }
         );
+
 
         copyButton.addEventListener(
             "click",
@@ -228,11 +318,11 @@
                     );
 
                     copyStatus.textContent =
-                        "Code copied!";
+                        "Key copied!";
                 }
                 catch {
                     /*
-                     * Fallback for browsers where clipboard access
+                     * Fallback if automatic clipboard access
                      * is unavailable.
                      */
                     const selection =
@@ -249,7 +339,7 @@
                     selection.addRange(range);
 
                     copyStatus.textContent =
-                        "Code selected — press Ctrl+C.";
+                        "Key selected — press Ctrl+C.";
                 }
             }
         );
