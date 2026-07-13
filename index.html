@@ -184,237 +184,233 @@
 
     </main>
 
-    <script>
-        /*
-         * Replace YOUR-SUBDOMAIN with the real Worker address.
-         *
-         * Do not put a slash at the end.
-         */
-        const API_BASE =
-            "https://oasis-activation-api.YOUR-SUBDOMAIN.workers.dev";
+   <script>
+    const API_BASE =
+        "https://oasis-activation-api.jacobleonardthomas.workers.dev";
+
+    const downloadButton =
+        document.getElementById("downloadButton");
+
+    const keyTitle =
+        document.getElementById("keyTitle");
+
+    const codeArea =
+        document.getElementById("codeArea");
+
+    const generatedCode =
+        document.getElementById("generatedCode");
+
+    const copyButton =
+        document.getElementById("copyButton");
+
+    const statusText =
+        document.getElementById("statusText");
+
+    /*
+     * This name is different from the old browser-generated
+     * key system, so an old fake key won't be restored.
+     */
+    const SESSION_KEY_NAME =
+        "oasisActivationKeyV1";
 
 
-        const downloadButton =
-            document.getElementById(
-                "downloadButton"
-            );
+    function showGeneratedKey(code)
+    {
+        generatedCode.textContent =
+            code;
 
-        const keyTitle =
-            document.getElementById(
-                "keyTitle"
-            );
+        keyTitle.style.display =
+            "block";
 
-        const codeArea =
-            document.getElementById(
-                "codeArea"
-            );
+        codeArea.style.display =
+            "flex";
 
-        const generatedCode =
-            document.getElementById(
-                "generatedCode"
-            );
+        downloadButton.disabled =
+            true;
 
-        const copyButton =
-            document.getElementById(
-                "copyButton"
-            );
+        downloadButton.textContent =
+            "Downloaded";
 
-        const statusText =
-            document.getElementById(
-                "statusText"
-            );
+        statusText.style.color =
+            "#7dff90";
+
+        statusText.textContent =
+            "";
+    }
 
 
-        function showGeneratedKey(code)
+    /*
+     * Refreshing keeps the same key.
+     * Closing the browser session lets the button reset later.
+     */
+    const existingKey =
+        sessionStorage.getItem(
+            SESSION_KEY_NAME
+        );
+
+    if (existingKey)
+    {
+        showGeneratedKey(existingKey);
+    }
+
+
+    downloadButton.addEventListener(
+        "click",
+        async function ()
         {
-            generatedCode.textContent =
-                code;
-
-            keyTitle.style.display =
-                "block";
-
-            codeArea.style.display =
-                "flex";
+            if (
+                sessionStorage.getItem(
+                    SESSION_KEY_NAME
+                )
+            )
+            {
+                return;
+            }
 
             downloadButton.disabled =
                 true;
 
             downloadButton.textContent =
-                "Downloaded";
+                "Preparing...";
+
+            statusText.style.color =
+                "#ffffff";
 
             statusText.textContent =
-                "";
-        }
+                "Generating your key...";
 
-
-        const existingKey =
-            sessionStorage.getItem(
-                "oasisGeneratedKey"
-            );
-
-        if (existingKey)
-        {
-            showGeneratedKey(
-                existingKey
-            );
-        }
-
-
-        downloadButton.addEventListener(
-            "click",
-            async function ()
+            try
             {
-                if (
-                    sessionStorage.getItem(
-                        "oasisGeneratedKey"
-                    )
-                )
-                {
-                    return;
-                }
+                const response =
+                    await fetch(
+                        API_BASE + "/create-key",
+                        {
+                            method: "POST"
+                        }
+                    );
 
-                downloadButton.disabled =
-                    true;
-
-                downloadButton.textContent =
-                    "Preparing...";
-
-                statusText.style.color =
-                    "#ffffff";
-
-                statusText.textContent =
-                    "Generating your key...";
+                let data;
 
                 try
                 {
-                    const response =
-                        await fetch(
-                            API_BASE +
-                            "/create-key",
-                            {
-                                method:
-                                    "POST",
-
-                                headers:
-                                {
-                                    "Content-Type":
-                                        "application/json"
-                                },
-
-                                body:
-                                    "{}"
-                            }
-                        );
-
-                    const data =
+                    data =
                         await response.json();
-
-                    if (
-                        response.status ===
-                        429
-                    )
-                    {
-                        throw new Error(
-                            "A key was already generated recently from this connection. Wait about ten minutes."
-                        );
-                    }
-
-                    if (
-                        !response.ok ||
-                        !data.ok ||
-                        !data.key
-                    )
-                    {
-                        throw new Error(
-                            "The key service could not generate a key."
-                        );
-                    }
-
-                    sessionStorage.setItem(
-                        "oasisGeneratedKey",
-                        data.key
-                    );
-
-                    showGeneratedKey(
-                        data.key
-                    );
-
-                    /*
-                     * Later, when the launcher is finished,
-                     * its download can start here.
-                     *
-                     * Example:
-                     *
-                     * window.location.href =
-                     *     "YOUR-LAUNCHER-DOWNLOAD";
-                     */
-                }
-                catch (error)
-                {
-                    downloadButton.disabled =
-                        false;
-
-                    downloadButton.textContent =
-                        "Download";
-
-                    statusText.style.color =
-                        "#ff6868";
-
-                    statusText.textContent =
-                        error.message ||
-                        "Something went wrong.";
-                }
-            }
-        );
-
-
-        copyButton.addEventListener(
-            "click",
-            async function ()
-            {
-                const code =
-                    generatedCode.textContent;
-
-                if (!code)
-                {
-                    return;
-                }
-
-                try
-                {
-                    await navigator
-                        .clipboard
-                        .writeText(code);
-
-                    statusText.style.color =
-                        "#7dff90";
-
-                    statusText.textContent =
-                        "Key copied!";
                 }
                 catch
                 {
-                    const selection =
-                        window.getSelection();
-
-                    const range =
-                        document.createRange();
-
-                    range.selectNodeContents(
-                        generatedCode
+                    throw new Error(
+                        "The key server returned an unreadable response."
                     );
-
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-
-                    statusText.style.color =
-                        "#7dff90";
-
-                    statusText.textContent =
-                        "Key selected — press Ctrl+C.";
                 }
+
+                if (response.status === 429)
+                {
+                    throw new Error(
+                        "A key was generated recently from this connection. Wait ten minutes and try again."
+                    );
+                }
+
+                if (!response.ok)
+                {
+                    throw new Error(
+                        data.error ||
+                        "The key server rejected the request."
+                    );
+                }
+
+                if (
+                    !data.ok ||
+                    typeof data.key !== "string" ||
+                    data.key.length === 0
+                )
+                {
+                    throw new Error(
+                        "The key server did not return a key."
+                    );
+                }
+
+                sessionStorage.setItem(
+                    SESSION_KEY_NAME,
+                    data.key
+                );
+
+                showGeneratedKey(
+                    data.key
+                );
+
+                /*
+                 * Later, put the finished launcher download here:
+                 *
+                 * window.location.href =
+                 *     "YOUR-LAUNCHER-DOWNLOAD-LINK";
+                 */
             }
-        );
-    </script>
+            catch (error)
+            {
+                downloadButton.disabled =
+                    false;
+
+                downloadButton.textContent =
+                    "Download";
+
+                statusText.style.color =
+                    "#ff6868";
+
+                statusText.textContent =
+                    error.message ||
+                    "Something went wrong.";
+            }
+        }
+    );
+
+
+    copyButton.addEventListener(
+        "click",
+        async function ()
+        {
+            const code =
+                generatedCode.textContent;
+
+            if (!code)
+            {
+                return;
+            }
+
+            try
+            {
+                await navigator.clipboard.writeText(
+                    code
+                );
+
+                statusText.style.color =
+                    "#7dff90";
+
+                statusText.textContent =
+                    "Key copied!";
+            }
+            catch
+            {
+                const selection =
+                    window.getSelection();
+
+                const range =
+                    document.createRange();
+
+                range.selectNodeContents(
+                    generatedCode
+                );
+
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                statusText.style.color =
+                    "#7dff90";
+
+                statusText.textContent =
+                    "Key selected — press Ctrl+C.";
+            }
+        }
+    );
+</script>
 </body>
 </html>
