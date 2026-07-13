@@ -31,6 +31,7 @@
 
         .container {
             text-align: center;
+            padding: 30px;
         }
 
         button {
@@ -67,8 +68,6 @@
 
             cursor: not-allowed;
             opacity: 0.65;
-
-            transform: none;
         }
 
         #keyTitle {
@@ -91,12 +90,13 @@
         }
 
         #codePanel {
-            min-width: 190px;
+            min-width: 270px;
             padding: 14px 22px;
 
             border: 3px solid white;
 
-            border-radius: 18px 5px 18px 5px;
+            border-radius:
+                18px 5px 18px 5px;
 
             background: #101010;
 
@@ -111,9 +111,9 @@
             display: block;
 
             color: white;
-            font-size: 25px;
+            font-size: 21px;
             font-weight: bold;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
 
             user-select: text;
             cursor: text;
@@ -123,12 +123,30 @@
             min-width: 90px;
         }
 
-        #copyStatus {
-            min-height: 22px;
-            margin-top: 14px;
+        #statusText {
+            min-height: 24px;
+            margin-top: 15px;
 
             color: #7dff90;
             font-size: 14px;
+        }
+
+        @media (
+            max-width: 520px
+        ) {
+            #codeArea {
+                flex-direction: column;
+            }
+
+            #codePanel {
+                min-width: 0;
+                width: 100%;
+            }
+
+            #generatedCode {
+                font-size: 16px;
+                letter-spacing: 1px;
+            }
         }
     </style>
 </head>
@@ -162,79 +180,53 @@
 
         </div>
 
-        <div id="copyStatus"></div>
+        <div id="statusText"></div>
 
     </main>
 
     <script>
-        const downloadButton =
-            document.getElementById("downloadButton");
-
-        const keyTitle =
-            document.getElementById("keyTitle");
-
-        const codeArea =
-            document.getElementById("codeArea");
-
-        const generatedCode =
-            document.getElementById("generatedCode");
-
-        const copyButton =
-            document.getElementById("copyButton");
-
-        const copyStatus =
-            document.getElementById("copyStatus");
-
-
         /*
-         * Characters that can easily be confused have been removed:
+         * Replace YOUR-SUBDOMAIN with the real Worker address.
          *
-         * 0, O, 1, I and L
+         * Do not put a slash at the end.
          */
-        const characters =
-            "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+        const API_BASE =
+            "https://oasis-activation-api.YOUR-SUBDOMAIN.workers.dev";
 
 
-        function getSecureRandomNumber(maximum) {
-            const randomValues =
-                new Uint32Array(1);
-
-            window.crypto.getRandomValues(
-                randomValues
+        const downloadButton =
+            document.getElementById(
+                "downloadButton"
             );
 
-            return randomValues[0] % maximum;
-        }
+        const keyTitle =
+            document.getElementById(
+                "keyTitle"
+            );
+
+        const codeArea =
+            document.getElementById(
+                "codeArea"
+            );
+
+        const generatedCode =
+            document.getElementById(
+                "generatedCode"
+            );
+
+        const copyButton =
+            document.getElementById(
+                "copyButton"
+            );
+
+        const statusText =
+            document.getElementById(
+                "statusText"
+            );
 
 
-        function generateRandomCode() {
-            /*
-             * Generates a random length from 5 to 8.
-             */
-            const codeLength =
-                5 + getSecureRandomNumber(4);
-
-            let code = "";
-
-            for (
-                let index = 0;
-                index < codeLength;
-                index++
-            ) {
-                const characterIndex =
-                    getSecureRandomNumber(
-                        characters.length
-                    );
-
-                code +=
-                    characters[characterIndex];
-            }
-
-            return code;
-        }
-
-
-        function showGeneratedKey(code) {
+        function showGeneratedKey(code)
+        {
             generatedCode.textContent =
                 code;
 
@@ -244,28 +236,24 @@
             codeArea.style.display =
                 "flex";
 
-            copyStatus.textContent =
-                "";
-
             downloadButton.disabled =
                 true;
 
             downloadButton.textContent =
                 "Downloaded";
+
+            statusText.textContent =
+                "";
         }
 
 
-        /*
-         * Restore the key after refreshing the page.
-         *
-         * sessionStorage is cleared when the tab/browser session closes.
-         */
         const existingKey =
             sessionStorage.getItem(
                 "oasisGeneratedKey"
             );
 
-        if (existingKey) {
+        if (existingKey)
+        {
             showGeneratedKey(
                 existingKey
             );
@@ -274,57 +262,138 @@
 
         downloadButton.addEventListener(
             "click",
-            function () {
-                /*
-                 * Prevent another key being created during
-                 * the same browser session.
-                 */
+            async function ()
+            {
                 if (
                     sessionStorage.getItem(
                         "oasisGeneratedKey"
                     )
-                ) {
+                )
+                {
                     return;
                 }
 
-                const newCode =
-                    generateRandomCode();
+                downloadButton.disabled =
+                    true;
 
-                sessionStorage.setItem(
-                    "oasisGeneratedKey",
-                    newCode
-                );
+                downloadButton.textContent =
+                    "Preparing...";
 
-                showGeneratedKey(
-                    newCode
-                );
+                statusText.style.color =
+                    "#ffffff";
+
+                statusText.textContent =
+                    "Generating your key...";
+
+                try
+                {
+                    const response =
+                        await fetch(
+                            API_BASE +
+                            "/create-key",
+                            {
+                                method:
+                                    "POST",
+
+                                headers:
+                                {
+                                    "Content-Type":
+                                        "application/json"
+                                },
+
+                                body:
+                                    "{}"
+                            }
+                        );
+
+                    const data =
+                        await response.json();
+
+                    if (
+                        response.status ===
+                        429
+                    )
+                    {
+                        throw new Error(
+                            "A key was already generated recently from this connection. Wait about ten minutes."
+                        );
+                    }
+
+                    if (
+                        !response.ok ||
+                        !data.ok ||
+                        !data.key
+                    )
+                    {
+                        throw new Error(
+                            "The key service could not generate a key."
+                        );
+                    }
+
+                    sessionStorage.setItem(
+                        "oasisGeneratedKey",
+                        data.key
+                    );
+
+                    showGeneratedKey(
+                        data.key
+                    );
+
+                    /*
+                     * Later, when the launcher is finished,
+                     * its download can start here.
+                     *
+                     * Example:
+                     *
+                     * window.location.href =
+                     *     "YOUR-LAUNCHER-DOWNLOAD";
+                     */
+                }
+                catch (error)
+                {
+                    downloadButton.disabled =
+                        false;
+
+                    downloadButton.textContent =
+                        "Download";
+
+                    statusText.style.color =
+                        "#ff6868";
+
+                    statusText.textContent =
+                        error.message ||
+                        "Something went wrong.";
+                }
             }
         );
 
 
         copyButton.addEventListener(
             "click",
-            async function () {
+            async function ()
+            {
                 const code =
                     generatedCode.textContent;
 
-                if (!code) {
+                if (!code)
+                {
                     return;
                 }
 
-                try {
-                    await navigator.clipboard.writeText(
-                        code
-                    );
+                try
+                {
+                    await navigator
+                        .clipboard
+                        .writeText(code);
 
-                    copyStatus.textContent =
+                    statusText.style.color =
+                        "#7dff90";
+
+                    statusText.textContent =
                         "Key copied!";
                 }
-                catch {
-                    /*
-                     * Fallback if automatic clipboard access
-                     * is unavailable.
-                     */
+                catch
+                {
                     const selection =
                         window.getSelection();
 
@@ -338,7 +407,10 @@
                     selection.removeAllRanges();
                     selection.addRange(range);
 
-                    copyStatus.textContent =
+                    statusText.style.color =
+                        "#7dff90";
+
+                    statusText.textContent =
                         "Key selected — press Ctrl+C.";
                 }
             }
