@@ -2,21 +2,257 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
 
-    <title>Oasis</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Oasis Verification</title>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             min-height: 100vh;
-            background: black;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            background: #050505;
+            color: white;
+
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        button {
+            padding: 13px 25px;
+
+            border: 2px solid white;
+            border-radius: 8px;
+
+            background: #151515;
+            color: white;
+
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #292929;
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        #codeArea {
+            display: none;
+
+            align-items: center;
+            justify-content: center;
+
+            gap: 10px;
+            margin-top: 22px;
+        }
+
+        #codePanel {
+            min-width: 190px;
+            padding: 14px 22px;
+
+            border: 3px solid white;
+
+            /*
+             * Slightly unusual panel shape.
+             */
+            border-radius: 18px 5px 18px 5px;
+
+            background: #101010;
+
+            box-shadow:
+                5px 5px 0 #555,
+                -2px -2px 0 #222;
+
+            transform: rotate(-1deg);
+        }
+
+        #generatedCode {
+            display: block;
+
+            color: white;
+            font-size: 25px;
+            font-weight: bold;
+            letter-spacing: 3px;
+
+            /*
+             * Allows normal text highlighting and copying.
+             */
+            user-select: text;
+            cursor: text;
+        }
+
+        #copyButton {
+            min-width: 90px;
+        }
+
+        #copyStatus {
+            min-height: 22px;
+            margin-top: 14px;
+
+            color: #7dff90;
+            font-size: 14px;
         }
     </style>
 </head>
 
-<body style="color: white; font-family: Arial; text-align: center; padding-top: 100px;">
-    <h1>Oasis Website Works</h1>
+<body>
+    <main class="container">
+        <button
+            id="generateButton"
+            type="button"
+        >
+            Generate Code
+        </button>
+
+        <div id="codeArea">
+            <div id="codePanel">
+                <span id="generatedCode"></span>
+            </div>
+
+            <button
+                id="copyButton"
+                type="button"
+            >
+                Copy
+            </button>
+        </div>
+
+        <div id="copyStatus"></div>
+    </main>
+
+    <script>
+        const generateButton =
+            document.getElementById("generateButton");
+
+        const codeArea =
+            document.getElementById("codeArea");
+
+        const generatedCode =
+            document.getElementById("generatedCode");
+
+        const copyButton =
+            document.getElementById("copyButton");
+
+        const copyStatus =
+            document.getElementById("copyStatus");
+
+        /*
+         * Removed easily confused characters:
+         * 0, O, 1, I and L.
+         */
+        const characters =
+            "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+        function getSecureRandomNumber(maximum) {
+            const randomValues =
+                new Uint32Array(1);
+
+            window.crypto.getRandomValues(
+                randomValues
+            );
+
+            return randomValues[0] % maximum;
+        }
+
+        function generateRandomCode() {
+            /*
+             * Generates a length from 5 through 8.
+             */
+            const codeLength =
+                5 + getSecureRandomNumber(4);
+
+            let code = "";
+
+            for (
+                let index = 0;
+                index < codeLength;
+                index++
+            ) {
+                const characterIndex =
+                    getSecureRandomNumber(
+                        characters.length
+                    );
+
+                code +=
+                    characters[characterIndex];
+            }
+
+            return code;
+        }
+
+        generateButton.addEventListener(
+            "click",
+            function () {
+                generatedCode.textContent =
+                    generateRandomCode();
+
+                codeArea.style.display =
+                    "flex";
+
+                copyStatus.textContent =
+                    "";
+            }
+        );
+
+        copyButton.addEventListener(
+            "click",
+            async function () {
+                const code =
+                    generatedCode.textContent;
+
+                if (!code) {
+                    return;
+                }
+
+                try {
+                    await navigator.clipboard.writeText(
+                        code
+                    );
+
+                    copyStatus.textContent =
+                        "Code copied!";
+                }
+                catch {
+                    /*
+                     * Fallback for browsers where clipboard access
+                     * is unavailable.
+                     */
+                    const selection =
+                        window.getSelection();
+
+                    const range =
+                        document.createRange();
+
+                    range.selectNodeContents(
+                        generatedCode
+                    );
+
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+
+                    copyStatus.textContent =
+                        "Code selected — press Ctrl+C.";
+                }
+            }
+        );
+    </script>
 </body>
 </html>
